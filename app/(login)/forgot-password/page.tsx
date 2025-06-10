@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -26,17 +27,17 @@ export default function ForgotPasswordForm() {
   );
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4">
+    <div className="min-h-screen flex flex-col items-center justify-center px-4">
       <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle>Forgot your password?</CardTitle>
+        <CardHeader className="text-center">
+          <CardTitle className="text-xl">Forgot your password?</CardTitle>
           <CardDescription>
             Enter your email and we’ll send you a reset link.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form action={formAction} className="grid gap-4">
-            <div className="grid gap-2">
+          <form action={formAction} className="grid gap-6">
+            <div className="grid gap-3">
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
@@ -57,6 +58,15 @@ export default function ForgotPasswordForm() {
             <Button type="submit" disabled={pending}>
               {pending ? "Sending..." : "Send Reset Link"}
             </Button>
+
+            <div className="text-center text-sm">
+              <Link
+                href="/sign-in"
+                className="underline underline-offset-4 text-muted-foreground hover:text-primary"
+              >
+                Go back to sign in
+              </Link>
+            </div>
           </form>
         </CardContent>
       </Card>

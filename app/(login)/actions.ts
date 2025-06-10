@@ -247,7 +247,7 @@ export async function signOut() {
   (await cookies()).delete('session');
 
   // ✅ Redirect to sign-in
-  redirect('/sign-in');
+  redirect('/');
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -560,41 +560,41 @@ const passwordResetSchema = z.object({
   email: z.string().email()
 });
 
-
 export async function requestPasswordReset(formData: FormData) {
+  const parsed = passwordResetSchema.safeParse({ email: formData.get('email') });
+
+  if (!parsed.success) {
+    return { error: 'Invalid email address.' };
+  }
+
+  const email = parsed.data.email;
+  const user = await db.select().from(users).where(eq(users.email, email)).limit(1);
+
+  if (user.length === 0) {
+    // For security, still return a generic success message
+    return { success: 'If an account exists for that email, a reset link has been sent.' };
+  }
+
+  const [existingUser] = user;
+
+  const token = crypto.randomBytes(32).toString('hex');
+  const expiresAt = addMinutes(new Date(), 30);
+
   try {
-    const parsed = passwordResetSchema.safeParse({ email: formData.get('email') });
-
-    if (!parsed.success) {
-      return { error: 'Invalid email address.' };
-    }
-
-    const email = parsed.data.email;
-    const user = await db.select().from(users).where(eq(users.email, email)).limit(1);
-
-    if (user.length === 0) {
-      return { error: 'No account found with that email.' };
-    }
-
-    const [existingUser] = user;
-
-    const token = crypto.randomBytes(32).toString('hex');
-    const expiresAt = addMinutes(new Date(), 30);
-
-    const result = await db.insert(passwordResetTokens).values({
+    await db.insert(passwordResetTokens).values({
       userId: existingUser.id,
       token,
       expiresAt
     }).returning();
 
-    console.log('✅ Inserted token:', result);
-
     await sendPasswordResetEmail({ email, token });
-
-    redirect('/sign-in');
   } catch (error) {
     console.error('❌ Error in requestPasswordReset:', error);
-    return { error: 'Something went wrong while processing your request.' };
+    return { error: 'Something went wrong. Please try again later.' };
   }
+
+  return { success: 'If an account exists for that email, a reset link has been sent.' };
 }
+
+
 
