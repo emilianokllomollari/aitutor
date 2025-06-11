@@ -1,10 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, Suspense } from "react";
-import { useRouter } from "next/navigation";
-import useSWR from "swr";
-
+import { use, useState, Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { CircleIcon, Home, LogOut } from "lucide-react";
 import {
@@ -14,7 +11,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { signOut } from "@/app/(login)/actions";
+import { useRouter } from "next/navigation";
 import { User } from "@/lib/db/schema";
+import useSWR from "swr";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -24,7 +24,7 @@ function UserMenu() {
   const router = useRouter();
 
   async function handleSignOut() {
-    await fetch("/api/sign-out", { method: "POST" });
+    await signOut();
     router.refresh();
     router.push("/");
   }
@@ -65,13 +65,14 @@ function UserMenu() {
             <span>Dashboard</span>
           </Link>
         </DropdownMenuItem>
-        <DropdownMenuItem
-          onClick={handleSignOut}
-          className="cursor-pointer text-red-600"
-        >
-          <LogOut className="mr-2 h-4 w-4" />
-          <span>Sign out</span>
-        </DropdownMenuItem>
+        <form action={handleSignOut} className="w-full">
+          <button type="submit" className="flex w-full">
+            <DropdownMenuItem className="w-full flex-1 cursor-pointer">
+              <LogOut className="mr-2 h-4 w-4" />
+              <span>Sign out</span>
+            </DropdownMenuItem>
+          </button>
+        </form>
       </DropdownMenuContent>
     </DropdownMenu>
   );
