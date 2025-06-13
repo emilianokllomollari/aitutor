@@ -12,7 +12,7 @@ export default async function ActivityPage({
 }) {
   const params = await searchParams;
   const page = parseInt(params?.page ?? "1", 10) || 1;
-  const limit = 10;
+  const limit = 9;
 
   // Fetch team immediately
   const team = await getTeamForUserWithRole();

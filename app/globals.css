@@ -266,10 +266,19 @@
 */
 
 @layer base {
+  html,
+  body {
+    height: 100%;
+    overflow-x: hidden;
+    overflow-y: hidden;
+  }
+
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
+    font-family: "Manrope", Arial, Helvetica, sans-serif;
   }
 }

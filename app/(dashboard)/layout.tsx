@@ -1,8 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import dynamic from "next/dynamic";
-import { useState, Suspense, useTransition } from "react";
+import { useState, Suspense, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,7 +23,6 @@ function UserMenu() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { data: user } = useSWR<User>("/api/user", fetcher);
   const router = useRouter();
-  const [isPending, startTransition] = useTransition();
 
   const t = siteConfig.navigation.items;
 
@@ -46,15 +44,12 @@ function UserMenu() {
       <>
         <Link
           href="/pricing"
-          prefetch
           className="text-sm font-medium text-gray-700 hover:text-gray-900"
         >
           {t.pricing}
         </Link>
         <Button asChild className="rounded-full">
-          <Link href="/sign-up" prefetch>
-            {t.signUp}
-          </Link>
+          <Link href="/sign-up">{t.signUp}</Link>
         </Button>
       </>
     );
@@ -68,23 +63,22 @@ function UserMenu() {
           <AvatarFallback>
             {user.email
               .split(" ")
-              .map((n) => n[0])
+              .map((n: string) => n[0])
               .join("")}
           </AvatarFallback>
         </Avatar>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56 flex flex-col gap-1">
         {navItems.map((item) => (
-          <DropdownMenuItem
-            key={item.href}
-            className="w-full cursor-pointer"
-            onClick={() => {
-              setIsMenuOpen(false);
-              startTransition(() => router.push(item.href));
-            }}
-          >
-            <item.icon className="h-4 w-4" />
-            <span>{item.label}</span>
+          <DropdownMenuItem key={item.href} className="w-full">
+            <Link
+              href={item.href}
+              className="flex items-center gap-2 w-full"
+              onClick={() => setIsMenuOpen(false)}
+            >
+              <item.icon className="h-4 w-4" />
+              <span>{item.label}</span>
+            </Link>
           </DropdownMenuItem>
         ))}
 
@@ -104,22 +98,23 @@ function UserMenu() {
 }
 
 function Header() {
+  const { data: team } = useSWR<{ name: string }>("/api/team", fetcher);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 dark:bg-gray-950/95 backdrop-blur-sm border-b border-gray-200 dark:border-gray-800 w-full">
+    <header className="sticky top-0 z-50 bg-white dark:bg-gray-950 border-b border-gray-200 dark:border-gray-800 w-full">
       <div className="w-full px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-        <Link href="/" className="flex items-center">
-          <img
-            src={siteConfig.logoUrl}
-            alt={`${siteConfig.name} Logo`}
-            className="h-8 w-auto"
-          />
+        <Link href="/" className="flex items-center gap-2 text-xl font-bold">
+          {/* Render only on client to prevent mismatch */}
+          {isMounted ? (team?.name ?? siteConfig.name) : siteConfig.name}
         </Link>
+
         <div className="flex items-center space-x-4">
-          <Suspense
-            fallback={
-              <div className="h-9 w-9 rounded-full bg-gray-200 animate-pulse" />
-            }
-          >
+          <Suspense fallback={<div className="h-9" />}>
             <UserMenu />
           </Suspense>
         </div>
@@ -128,11 +123,12 @@ function Header() {
   );
 }
 
+// ✅ THE FIXED LAYOUT
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (
-    <section className="flex flex-col min-h-screen w-full">
+    <div className="flex flex-col h-full w-full">
       <Header />
-      <main className="flex-1 pt-20">{children}</main>
-    </section>
+      <main className="flex-1 overflow-auto">{children}</main>
+    </div>
   );
 }

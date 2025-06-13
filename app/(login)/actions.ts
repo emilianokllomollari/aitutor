@@ -30,6 +30,7 @@ import { passwordResetTokens } from '@/lib/db/schema';
 import crypto from 'crypto';
 import { addMinutes } from 'date-fns';
 import { sendPasswordResetEmail } from '@/lib/email/password-reset';
+import { clearUserCache } from '../../lib/db/queries';
 
 async function logActivity(
   teamId: number | null | undefined,
@@ -243,6 +244,7 @@ export async function signOut() {
   (await cookies()).delete('session');
 
   // ✅ Redirect to sign-in
+  clearUserCache();
   redirect('/');
 }
 

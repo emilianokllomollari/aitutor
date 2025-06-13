@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Menu, Home } from "lucide-react";
+import { Menu, Home, Navigation } from "lucide-react";
 import { siteConfig } from "@/lib/config/site";
 
 export default function DashboardLayout({
@@ -24,7 +24,22 @@ export default function DashboardLayout({
       icon: Home,
       label: t.items.dashboard,
     },
+    {
+      href: "/dashboard/fleet",
+      icon: Navigation,
+      label: "Fleet",
+    },
   ];
+
+  // 🔍 Debug scroll values
+  useEffect(() => {
+    const el = document.documentElement;
+    const body = document.body;
+    console.log("💥 DEBUG SCROLL:");
+    console.log("html.scrollHeight:", el.scrollHeight);
+    console.log("body.scrollHeight:", body.scrollHeight);
+    console.log("window.innerHeight:", window.innerHeight);
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
