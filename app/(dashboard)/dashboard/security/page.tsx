@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Lock, Trash2, Loader2 } from "lucide-react";
 import { useActionState } from "react";
 import { updatePassword, deleteAccount } from "@/app/(login)/actions";
+import { siteConfig } from "@/lib/config/site";
 
 type PasswordState = {
   currentPassword?: string;
@@ -23,6 +24,8 @@ type DeleteState = {
 };
 
 export default function SecurityPage() {
+  const t = siteConfig.security;
+
   const [passwordState, passwordAction, isPasswordPending] = useActionState<
     PasswordState,
     FormData
@@ -36,17 +39,18 @@ export default function SecurityPage() {
   return (
     <section className="flex-1 p-4 lg:p-8">
       <h1 className="text-lg lg:text-2xl font-medium bold text-gray-900 mb-6">
-        Security Settings
+        {t.title}
       </h1>
+
       <Card className="mb-8">
         <CardHeader>
-          <CardTitle>Password</CardTitle>
+          <CardTitle>{t.password.title}</CardTitle>
         </CardHeader>
         <CardContent>
           <form className="space-y-4" action={passwordAction}>
             <div>
               <Label htmlFor="current-password" className="mb-2">
-                Current Password
+                {t.password.current}
               </Label>
               <Input
                 id="current-password"
@@ -61,7 +65,7 @@ export default function SecurityPage() {
             </div>
             <div>
               <Label htmlFor="new-password" className="mb-2">
-                New Password
+                {t.password.new}
               </Label>
               <Input
                 id="new-password"
@@ -76,7 +80,7 @@ export default function SecurityPage() {
             </div>
             <div>
               <Label htmlFor="confirm-password" className="mb-2">
-                Confirm New Password
+                {t.password.confirm}
               </Label>
               <Input
                 id="confirm-password"
@@ -102,12 +106,12 @@ export default function SecurityPage() {
               {isPasswordPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Updating...
+                  {t.password.updating}
                 </>
               ) : (
                 <>
                   <Lock className="mr-2 h-4 w-4" />
-                  Update Password
+                  {t.password.updateButton}
                 </>
               )}
             </Button>
@@ -117,16 +121,14 @@ export default function SecurityPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Delete Account</CardTitle>
+          <CardTitle>{t.delete.title}</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-gray-500 mb-4">
-            Account deletion is non-reversable. Please proceed with caution.
-          </p>
+          <p className="text-sm text-gray-500 mb-4">{t.delete.description}</p>
           <form action={deleteAction} className="space-y-4">
             <div>
               <Label htmlFor="delete-password" className="mb-2">
-                Confirm Password
+                {t.delete.confirmPassword}
               </Label>
               <Input
                 id="delete-password"
@@ -141,6 +143,9 @@ export default function SecurityPage() {
             {deleteState.error && (
               <p className="text-red-500 text-sm">{deleteState.error}</p>
             )}
+            {deleteState.success && (
+              <p className="text-green-500 text-sm">{deleteState.success}</p>
+            )}
             <Button
               type="submit"
               variant="destructive"
@@ -150,12 +155,12 @@ export default function SecurityPage() {
               {isDeletePending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Deleting...
+                  {t.delete.deleting}
                 </>
               ) : (
                 <>
                   <Trash2 className="mr-2 h-4 w-4" />
-                  Delete Account
+                  {t.delete.deleteButton}
                 </>
               )}
             </Button>

@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { use, useState, Suspense } from "react";
+import dynamic from "next/dynamic";
+import { useState, Suspense, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { CircleIcon, Home, LogOut } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,10 +12,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { signOut } from "@/app/(login)/actions";
-import { useRouter } from "next/navigation";
-import { User } from "@/lib/db/schema";
+import { LogOut, Users, Settings, Activity, Shield } from "lucide-react";
 import useSWR from "swr";
+import { signOut } from "@/app/(login)/actions";
+import { User } from "@/lib/db/schema";
+import { siteConfig } from "@/lib/config/site";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -22,6 +24,16 @@ function UserMenu() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { data: user } = useSWR<User>("/api/user", fetcher);
   const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+
+  const t = siteConfig.navigation.items;
+
+  const navItems = [
+    { href: "/dashboard/team", icon: Users, label: t.team },
+    { href: "/dashboard/general", icon: Settings, label: t.general },
+    { href: "/dashboard/activity", icon: Activity, label: t.activity },
+    { href: "/dashboard/security", icon: Shield, label: t.security },
+  ];
 
   async function handleSignOut() {
     await signOut();
@@ -34,12 +46,15 @@ function UserMenu() {
       <>
         <Link
           href="/pricing"
+          prefetch
           className="text-sm font-medium text-gray-700 hover:text-gray-900"
         >
-          Pricing
+          {t.pricing}
         </Link>
         <Button asChild className="rounded-full">
-          <Link href="/sign-up">Sign Up</Link>
+          <Link href="/sign-up" prefetch>
+            {t.signUp}
+          </Link>
         </Button>
       </>
     );
@@ -58,18 +73,28 @@ function UserMenu() {
           </AvatarFallback>
         </Avatar>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="flex flex-col gap-1">
-        <DropdownMenuItem className="cursor-pointer">
-          <Link href="/dashboard" className="flex w-full items-center">
-            <Home className="mr-2 h-4 w-4" />
-            <span>Dashboard</span>
-          </Link>
-        </DropdownMenuItem>
+      <DropdownMenuContent align="end" className="w-56 flex flex-col gap-1">
+        {navItems.map((item) => (
+          <DropdownMenuItem
+            key={item.href}
+            className="w-full cursor-pointer"
+            onClick={() => {
+              setIsMenuOpen(false);
+              startTransition(() => router.push(item.href));
+            }}
+          >
+            <item.icon className="h-4 w-4" />
+            <span>{item.label}</span>
+          </DropdownMenuItem>
+        ))}
+
+        <div className="border-t my-1" />
+
         <form action={handleSignOut} className="w-full">
           <button type="submit" className="flex w-full">
-            <DropdownMenuItem className="w-full flex-1 cursor-pointer">
-              <LogOut className="mr-2 h-4 w-4" />
-              <span>Sign out</span>
+            <DropdownMenuItem className="w-full flex items-center gap-2">
+              <LogOut className="h-4 w-4" />
+              <span>{t.signOut}</span>
             </DropdownMenuItem>
           </button>
         </form>
@@ -80,14 +105,21 @@ function UserMenu() {
 
 function Header() {
   return (
-    <header className="border-b border-gray-200">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+    <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 dark:bg-gray-950/95 backdrop-blur-sm border-b border-gray-200 dark:border-gray-800 w-full">
+      <div className="w-full px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
         <Link href="/" className="flex items-center">
-          <CircleIcon className="h-6 w-6 text-orange-500" />
-          <span className="ml-2 text-xl font-semibold text-gray-900">ACME</span>
+          <img
+            src={siteConfig.logoUrl}
+            alt={`${siteConfig.name} Logo`}
+            className="h-8 w-auto"
+          />
         </Link>
         <div className="flex items-center space-x-4">
-          <Suspense fallback={<div className="h-9" />}>
+          <Suspense
+            fallback={
+              <div className="h-9 w-9 rounded-full bg-gray-200 animate-pulse" />
+            }
+          >
             <UserMenu />
           </Suspense>
         </div>
@@ -98,9 +130,9 @@ function Header() {
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (
-    <section className="flex flex-col min-h-screen">
+    <section className="flex flex-col min-h-screen w-full">
       <Header />
-      {children}
+      <main className="flex-1 pt-20">{children}</main>
     </section>
   );
 }

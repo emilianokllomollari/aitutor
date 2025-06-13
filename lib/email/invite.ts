@@ -13,7 +13,7 @@ export async function sendTeamInviteEmail({
   role: string;
   inviteId: number;
 }) {
-  const signupUrl = `${process.env.BASE_URL}/sign-up?inviteId=${inviteId}`;
+  const signupUrl = `${process.env.BASE_URL}/sign-up?inviteId=${inviteId}&email=${encodeURIComponent(email)}`;
 
   const subject = `You're invited to join ${teamName}`;
   const html = `
@@ -23,7 +23,7 @@ export async function sendTeamInviteEmail({
   `;
 
   await resend.emails.send({
-    from: 'onboarding@resend.dev',
+    from: 'no-reply@mjeti360.com',
     to: email,
     subject,
     html

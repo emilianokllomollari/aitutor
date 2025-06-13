@@ -1,9 +1,7 @@
-// app/(dashboard)/dashboard/activity/loading.tsx
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { siteConfig } from "@/lib/config/site";
 
-export default function Loading() {
+export default function ActivityPageSkeleton() {
   const t = siteConfig.activity;
 
   return (

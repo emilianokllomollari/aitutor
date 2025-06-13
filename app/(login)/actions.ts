@@ -119,7 +119,6 @@ const signUpSchema = z.object({
 //  Sign Up
 // ─────────────────────────────────────────────────────────────────────────────
 
-
 export const signUp = validatedAction(signUpSchema, async (data, formData) => {
   const { email, password, inviteId } = data;
 
@@ -139,28 +138,12 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
 
   const passwordHash = await hashPassword(password);
 
-  const newUser: NewUser = {
-    email,
-    passwordHash,
-    role: 'owner' // Default role, will be overridden if there's an invitation
-  };
-
-  const [createdUser] = await db.insert(users).values(newUser).returning();
-
-  if (!createdUser) {
-    return {
-      error: 'Failed to create user. Please try again.',
-      email,
-      password
-    };
-  }
-
   let teamId: number;
   let userRole: string;
   let createdTeam: typeof teams.$inferSelect | null = null;
 
   if (inviteId) {
-    // Check if there's a valid invitation
+    // Handle invited user (owner or member)
     const [invitation] = await db
       .select()
       .from(invitations)
@@ -173,27 +156,25 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
       )
       .limit(1);
 
-    if (invitation) {
-      teamId = invitation.teamId;
-      userRole = invitation.role;
-
-      await db
-        .update(invitations)
-        .set({ status: 'accepted' })
-        .where(eq(invitations.id, invitation.id));
-
-      await logActivity(teamId, createdUser.id, ActivityType.ACCEPT_INVITATION);
-
-      [createdTeam] = await db
-        .select()
-        .from(teams)
-        .where(eq(teams.id, teamId))
-        .limit(1);
-    } else {
+    if (!invitation) {
       return { error: 'Invalid or expired invitation.', email, password };
     }
+
+    teamId = invitation.teamId;
+    userRole = invitation.role; // Can be 'owner' or 'member'
+
+    await db
+      .update(invitations)
+      .set({ status: 'accepted' })
+      .where(eq(invitations.id, invitation.id));
+
+    [createdTeam] = await db
+      .select()
+      .from(teams)
+      .where(eq(teams.id, teamId))
+      .limit(1);
   } else {
-    // Create a new team if there's no invitation
+    // Handle self-signup (new team creator, always owner)
     const newTeam: NewTeam = {
       name: `${email}'s Team`
     };
@@ -210,18 +191,32 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
 
     teamId = createdTeam.id;
     userRole = 'owner';
-
-    await logActivity(teamId, createdUser.id, ActivityType.CREATE_TEAM);
   }
 
-  const newTeamMember: NewTeamMember = {
-    userId: createdUser.id,
-    teamId: teamId,
-    role: userRole
+  // Insert the user AFTER deciding the role
+  const newUser: NewUser = {
+    email,
+    passwordHash,
+    role: userRole // ✅ Role comes from invite or fallback
   };
 
+  const [createdUser] = await db.insert(users).values(newUser).returning();
+
+  if (!createdUser) {
+    return {
+      error: 'Failed to create user. Please try again.',
+      email,
+      password
+    };
+  }
+
   await Promise.all([
-    db.insert(teamMembers).values(newTeamMember),
+    db.insert(teamMembers).values({
+      userId: createdUser.id,
+      teamId: teamId,
+      role: userRole
+    }),
+    logActivity(teamId, createdUser.id, inviteId ? ActivityType.ACCEPT_INVITATION : ActivityType.CREATE_TEAM),
     logActivity(teamId, createdUser.id, ActivityType.SIGN_UP),
     setSession(createdUser)
   ]);
@@ -234,6 +229,7 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
 
   redirect('/dashboard');
 });
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  Sign Out
@@ -474,11 +470,6 @@ export const inviteTeamMember = validatedActionWithUser(
       )
       .limit(1);
 
-    if (existingInvitation.length > 0) {
-      return { error: 'An invitation has already been sent to this email' };
-    }
-
-    // ✅ Create the invitation and get the ID
     const [newInvitation] = await db.insert(invitations).values({
       teamId: userWithTeam.teamId,
       email,
@@ -493,14 +484,12 @@ export const inviteTeamMember = validatedActionWithUser(
       ActivityType.INVITE_TEAM_MEMBER
     );
 
-    // ✅ Fetch team separately to get the name
     const [team] = await db
       .select()
       .from(teams)
       .where(eq(teams.id, userWithTeam.teamId))
       .limit(1);
 
-    // ✅ Send invitation email
     await sendTeamInviteEmail({
       email,
       teamName: team.name,
@@ -508,9 +497,14 @@ export const inviteTeamMember = validatedActionWithUser(
       inviteId: newInvitation.id
     });
 
+    if (existingInvitation.length > 0) {
+      return { success: 'A previous invitation was found and a new one has been sent successfully' };
+    }
+
     return { success: 'Invitation sent successfully' };
   }
 );
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  Reset Password
@@ -597,4 +591,38 @@ export async function requestPasswordReset(formData: FormData) {
 }
 
 
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Change Team Name
+// ─────────────────────────────────────────────────────────────────────────────
+const updateTeamNameSchema = z.object({
+  teamId: z.string().refine(val => !isNaN(Number(val)), {
+    message: "Invalid team ID",
+  }),
+  name: z.string().min(1, 'Team name is required').max(100)
+});
+
+export const updateTeamName = validatedActionWithUser(
+  updateTeamNameSchema,
+  async (data, _, user) => {
+    const teamId = parseInt(data.teamId, 10);
+    const { name } = data;
+
+    const userWithTeam = await getUserWithTeam(user.id);
+    if (!userWithTeam || userWithTeam.teamId !== teamId) {
+      return { error: 'You do not have permission to update this team.' };
+    }
+
+    await Promise.all([
+      db.update(teams).set({ name }).where(eq(teams.id, teamId)),
+      logActivity(teamId, user.id, ActivityType.UPDATE_TEAM)
+    ]);
+
+    // Return the updated name along with success message
+    return { 
+      success: 'Team name updated successfully.',
+      name: name  // Add this line
+    };
+  }
+);
 

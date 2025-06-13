@@ -20,7 +20,7 @@ export async function sendPasswordResetEmail({
   `;
 
   await resend.emails.send({
-    from: 'onboarding@resend.dev',
+    from: 'no-reply@mjeti360.com',
     to: email,
     subject,
     html
