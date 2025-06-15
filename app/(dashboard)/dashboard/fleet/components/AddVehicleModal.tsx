@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogTrigger,
@@ -13,10 +12,14 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 
-export default function AddVehicleModal() {
-  const [open, setOpen] = useState(false);
-  const [vehicle, setVehicle] = useState({
+type AddVehicleModalProps = {
+  onSuccess?: () => void;
+};
+
+export default function AddVehicleModal({ onSuccess }: AddVehicleModalProps) {
+  const initialVehicleState = {
     brand: "",
     model: "",
     year: "",
@@ -28,7 +31,10 @@ export default function AddVehicleModal() {
     seats: "",
     kilometers: "",
     notes: "",
-  });
+  };
+
+  const [open, setOpen] = useState(false);
+  const [vehicle, setVehicle] = useState(initialVehicleState);
 
   const handleChange = (
     e: React.ChangeEvent<
@@ -36,18 +42,35 @@ export default function AddVehicleModal() {
     >
   ) => {
     const { name, value } = e.target;
-    setVehicle({
-      ...vehicle,
+    setVehicle((prev) => ({
+      ...prev,
       [name]: ["year", "seats", "kilometers", "engine"].includes(name)
         ? Number(value)
         : value,
-    });
+    }));
   };
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    console.log("Saving vehicle:", vehicle);
-    setOpen(false);
+    try {
+      const res = await fetch("/api/vehicles", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(vehicle),
+      });
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error("Error saving vehicle:", errorText);
+        return;
+      }
+
+      setVehicle(initialVehicleState);
+      setOpen(false);
+      onSuccess?.();
+    } catch (err) {
+      console.error("Failed to save vehicle:", err);
+    }
   };
 
   return (
@@ -66,7 +89,6 @@ export default function AddVehicleModal() {
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="mt-4 space-y-4">
-          {/* 2 fields per row */}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="brand">Brand</Label>
@@ -88,7 +110,6 @@ export default function AddVehicleModal() {
                 required
               />
             </div>
-
             <div>
               <Label htmlFor="year">Year</Label>
               <Input
@@ -111,7 +132,6 @@ export default function AddVehicleModal() {
                 required
               />
             </div>
-
             <div>
               <Label htmlFor="plate">Plate</Label>
               <Input
@@ -133,7 +153,6 @@ export default function AddVehicleModal() {
                 required
               />
             </div>
-
             <div>
               <Label htmlFor="engine">Engine (cc)</Label>
               <Input
@@ -142,7 +161,6 @@ export default function AddVehicleModal() {
                 name="engine"
                 value={vehicle.engine}
                 onChange={handleChange}
-                required
               />
             </div>
             <div>
@@ -163,7 +181,6 @@ export default function AddVehicleModal() {
                 <option value="Electric">Electric</option>
               </select>
             </div>
-
             <div>
               <Label htmlFor="gearbox">Gearbox</Label>
               <select
@@ -187,12 +204,10 @@ export default function AddVehicleModal() {
                 name="seats"
                 value={vehicle.seats}
                 onChange={handleChange}
-                required
               />
             </div>
           </div>
 
-          {/* Full-width Notes */}
           <div>
             <Label htmlFor="notes">Notes</Label>
             <textarea
@@ -205,7 +220,6 @@ export default function AddVehicleModal() {
             />
           </div>
 
-          {/* Buttons on the same row */}
           <div className="flex flex-row justify-end gap-2 pt-2">
             <DialogClose asChild>
               <Button variant="outline">Cancel</Button>

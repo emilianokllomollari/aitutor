@@ -31,6 +31,7 @@ import crypto from 'crypto';
 import { addMinutes } from 'date-fns';
 import { sendPasswordResetEmail } from '@/lib/email/password-reset';
 import { clearUserCache } from '../../lib/db/queries';
+import { revalidatePath, revalidateTag } from 'next/cache';
 
 async function logActivity(
   teamId: number | null | undefined,
@@ -236,16 +237,32 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
 //  Sign Out
 // ─────────────────────────────────────────────────────────────────────────────
 
-
 export async function signOut() {
   const user = (await getUser()) as User;
   const userWithTeam = await getUserWithTeam(user.id);
   await logActivity(userWithTeam?.teamId, user.id, ActivityType.SIGN_OUT);
-  (await cookies()).delete('session');
-
-  // ✅ Redirect to sign-in
+  
+  // Delete ALL cookies that might contain user data
+  const cookieStore = await cookies();
+  cookieStore.delete('session');
+  cookieStore.delete('token');
+  cookieStore.delete('user');
+  cookieStore.delete('auth');
+  
+  // Clear user cache
   clearUserCache();
-  redirect('/');
+  
+  // Nuclear cache clearing - clear everything
+  revalidateTag('user-data');
+  revalidateTag('user');
+  revalidateTag('team');
+  revalidateTag('dashboard');
+  revalidatePath('/', 'layout');
+  revalidatePath('/dashboard', 'layout');
+  revalidatePath('/profile', 'layout');
+  
+  // Force complete page refresh with cache busting
+  redirect(`/?cb=${Date.now()}&logout=1`);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

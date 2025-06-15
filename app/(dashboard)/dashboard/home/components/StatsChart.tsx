@@ -3,31 +3,77 @@
 import { useState } from "react";
 import dynamic from "next/dynamic";
 import type { ApexOptions } from "apexcharts";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"; // ✅ use the shared card styles
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 // Dynamic import to prevent SSR issues
 const ApexChart = dynamic(() => import("react-apexcharts"), { ssr: false });
 
+const timeframes = [
+  { label: "Today", key: "today" },
+  { label: "Yesterday", key: "yesterday" },
+  { label: "Last 7 days", key: "7d" },
+  { label: "Last 30 days", key: "30d" },
+  { label: "Last 90 days", key: "90d" },
+];
+
+const chartSeriesMap: Record<string, number[][]> = {
+  today: [
+    [6400, 6500, 6450, 6580, 6420, 6490],
+    [6300, 6370, 6330, 6410, 6280, 6350],
+  ],
+  yesterday: [
+    [6000, 6200, 6100, 6300, 6150, 6250],
+    [5900, 6100, 6050, 6150, 6000, 6120],
+  ],
+  "7d": [
+    [6500, 6418, 6456, 6526, 6356, 6456],
+    [6456, 6356, 6526, 6332, 6418, 6500],
+  ],
+  "30d": [
+    [5800, 5900, 6000, 6100, 6200, 6300],
+    [5400, 5500, 5600, 5700, 5800, 5900],
+  ],
+  "90d": [
+    [5000, 5200, 5400, 5600, 5800, 6000],
+    [4500, 4700, 4900, 5100, 5300, 5500],
+  ],
+};
+
 export default function StatsChart() {
-  const [timeframe, setTimeframe] = useState("Last week");
+  const [timeframe, setTimeframe] = useState("7d");
+
+  const series = [
+    {
+      name: "Revenue",
+      data: chartSeriesMap[timeframe][0],
+      color: "#0ea5e9", // sky-500 (revenue)
+    },
+    {
+      name: "Expenses",
+      data: chartSeriesMap[timeframe][1],
+      color: "#f97316", // orange-500 (expenses)
+    },
+  ];
 
   const options: ApexOptions = {
     chart: {
-      type: "line" as const,
+      type: "line",
       height: "100%",
       fontFamily: "Inter, sans-serif",
       dropShadow: { enabled: false },
       toolbar: { show: false },
     },
-    tooltip: {
-      enabled: true,
-      x: { show: false },
-    },
+    tooltip: { enabled: true, x: { show: false } },
     dataLabels: { enabled: false },
-    stroke: {
-      width: 6,
-      curve: "smooth",
-    },
+    stroke: { width: 4, curve: "smooth" },
     grid: {
       show: true,
       strokeDashArray: 4,
@@ -35,7 +81,7 @@ export default function StatsChart() {
     },
     legend: { show: false },
     xaxis: {
-      categories: ["01 Feb", "02 Feb", "03 Feb", "04 Feb", "05 Feb", "06 Feb"],
+      categories: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
       labels: {
         style: {
           fontFamily: "Inter, sans-serif",
@@ -48,46 +94,32 @@ export default function StatsChart() {
     yaxis: { show: false },
   };
 
-  const series = [
-    {
-      name: "Revenue",
-      data: [6500, 6418, 6456, 6526, 6356, 6456],
-      color: "#22C55E", // green
-    },
-    {
-      name: "Expenses",
-      data: [6456, 6356, 6526, 6332, 6418, 6500],
-      color: "#EF4444", // red
-    },
-  ];
-
   return (
     <Card>
-      <CardContent className="pt-4 space-y-4">
-        <div className="flex justify-between items-start flex-wrap gap-4">
-          <div className="grid grid-cols-2 gap-4">
-            <MetricBlock label="Revenue" value="$42,300" />
-            <MetricBlock label="Expenses" value="$5.40" />
-          </div>
-
-          <select
-            value={timeframe}
-            onChange={(e) => setTimeframe(e.target.value)}
-            className="px-3 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-lg hover:bg-gray-100 hover:text-blue-700 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-700"
-          >
-            {[
-              "Yesterday",
-              "Today",
-              "Last 7 days",
-              "Last 30 days",
-              "Last 90 days",
-            ].map((opt) => (
-              <option key={opt} value={opt}>
-                {opt}
-              </option>
-            ))}
-          </select>
+      <CardHeader className="pb-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <CardTitle className="text-xl">Stats Overview</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Revenue vs Expenses (
+            {timeframes.find((t) => t.key === timeframe)?.label})
+          </p>
         </div>
+        <Select value={timeframe} onValueChange={setTimeframe}>
+          <SelectTrigger className="w-[160px]">
+            <SelectValue placeholder="Select timeframe" />
+          </SelectTrigger>
+          <SelectContent>
+            {timeframes.map((tf) => (
+              <SelectItem key={tf.key} value={tf.key}>
+                {tf.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </CardHeader>
+
+      <CardContent className="space-y-6 pt-0">
+        <div className="grid grid-cols-2 gap-4 sm:gap-8"></div>
 
         <div>
           <ApexChart
@@ -105,12 +137,10 @@ export default function StatsChart() {
 function MetricBlock({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <h5 className="inline-flex items-center text-gray-500 dark:text-gray-400 text-sm font-normal mb-2">
+      <Label className="text-sm text-muted-foreground mb-1 block">
         {label}
-      </h5>
-      <p className="text-gray-900 dark:text-white text-2xl font-bold leading-none">
-        {value}
-      </p>
+      </Label>
+      <p className="text-2xl font-semibold text-foreground">{value}</p>
     </div>
   );
 }

@@ -3,7 +3,7 @@
 export const siteConfig = {
   name: "Mjeti360",
   logoUrl:
-    "https://bfjdbugavmagzhpgobfi.supabase.co/storage/v1/object/public/pictures/mjeti360/mjeti360_logo.png",
+    "https://uvodwbjgdoqckbcwlttv.supabase.co/storage/v1/object/public/mjeti360/mjeti360/mjeti360.png",
 
   auth: {
     login: {
@@ -130,28 +130,28 @@ export const siteConfig = {
 
 
   activity: {
-    title: "Activity Log",
+    actions: {
+      SIGN_UP: "Signed up",
+      SIGN_IN: "Signed in",
+      SIGN_OUT: "Signed out",
+      UPDATE_PASSWORD: "Updated password",
+      DELETE_ACCOUNT: "Deleted account",
+      UPDATE_ACCOUNT: "Updated account",
+      CREATE_TEAM: "Created a team",
+      REMOVE_TEAM_MEMBER: "Removed a team member",
+      INVITE_TEAM_MEMBER: "Invited a team member",
+      ACCEPT_INVITATION: "Accepted an invitation",
+      UPDATE_TEAM: "Updated team info",
+      ADD_VEHICLE: "Added a vehicle",
+      UPDATE_VEHICLE: "Updated a vehicle",
+      DELETE_VEHICLE: "Deleted a vehicle",
+      UNKNOWN: "Performed an unknown action",
+    },
     recent: "Recent Activity",
     emptyTitle: "No activity yet",
-    emptyDescription:
-      "When you perform actions like signing in or updating your account, they'll appear here.",
-    actions: {
-      SIGN_UP: "signed up",
-      SIGN_IN: "signed in",
-      SIGN_OUT: "signed out",
-      UPDATE_PASSWORD: "changed your password",
-      DELETE_ACCOUNT: "deleted your account",
-      UPDATE_ACCOUNT: "updated your account",
-      CREATE_TEAM: "created a new team",
-      UPDATE_TEAM: "updated your team",
-      REMOVE_TEAM_MEMBER: "removed a team member",
-      INVITE_TEAM_MEMBER: "invited a team member",
-      ACCEPT_INVITATION: "accepted an invitation",
-      UNKNOWN: "Unknown action occurred",
-    },
-
-    
+    emptyDescription: "You haven’t taken any actions that show up here.",
   },
+  
   
   
 };

@@ -1,11 +1,19 @@
 "use client";
 
-import StatsChart from "./home/components/StatsChart"; // ✅ points to Chart.tsx with ApexChart
+import useSWR from "swr";
+import StatsChart from "./home/components/StatsChart";
+
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 export default function HomePage() {
+  const { data: user } = useSWR("/api/user", fetcher);
+  const userName = user?.name?.split(" ")[0] ?? "there";
+
   return (
     <section className="h-full p-4 lg:p-8 space-y-6">
-      <h1 className="text-2xl font-semibold text-gray-900">Welcome</h1>
+      <h1 className="text-2xl font-semibold text-gray-900">
+        Welcome, {userName}
+      </h1>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
         <SummaryCard
@@ -34,7 +42,6 @@ export default function HomePage() {
         />
       </div>
 
-      {/* 📊 Chart below the summary cards */}
       <StatsChart />
     </section>
   );

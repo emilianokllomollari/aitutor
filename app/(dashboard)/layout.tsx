@@ -86,8 +86,8 @@ function UserMenu() {
 
         <form action={handleSignOut} className="w-full">
           <button type="submit" className="flex w-full">
-            <DropdownMenuItem className="w-full flex items-center gap-2">
-              <LogOut className="h-4 w-4" />
+            <DropdownMenuItem className="w-full flex items-center gap-2 text-red-600 focus:text-red-600 hover:bg-red-50">
+              <LogOut className="h-4 w-4 text-red-600" />
               <span>{t.signOut}</span>
             </DropdownMenuItem>
           </button>

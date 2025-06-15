@@ -1,32 +1,42 @@
 import { desc, and, eq, isNull, sql } from "drizzle-orm";
 import { db } from "./drizzle";
-import { activityLogs, teamMembers, teams, users } from "./schema";
+import { activityLogs, teamMembers, teams, users, vehicles } from "./schema";
+import { ActivityType, NewVehicle } from './schema';
 import { cookies } from "next/headers";
 import { verifyToken } from "@/lib/auth/session";
 
+// Type definition for user cache
+type UserCache = {
+  user: any;
+  expires: number;
+  sessionId: string;
+} | null;
+
 // Cache for user session to avoid repeated authentication
-let userCache: { user: any; expires: number } | null = null;
+let userCache: UserCache = null;
 
 /* -------------------------------------------
  * Get the authenticated user from session cookie
  * ------------------------------------------ */
 export async function getUser() {
-  // Check cache first (cache for 5 minutes)
-  if (userCache && userCache.expires > Date.now()) {
-    return userCache.user;
-  }
-
   const sessionCookie = (await cookies()).get("session");
   if (!sessionCookie?.value) return null;
+
+  const sessionId = sessionCookie.value;
+
+  // Check cache with session validation
+  if (userCache && 
+      userCache.expires > Date.now() && 
+      userCache.sessionId === sessionId) {
+    return userCache.user;
+  }
 
   const sessionData = await verifyToken(sessionCookie.value);
   const userId = sessionData?.user?.id;
 
-  if (
-    !sessionData ||
-    typeof userId !== "number" ||
-    new Date(sessionData.expires) < new Date()
-  ) {
+  if (!sessionData || 
+      typeof userId !== "number" || 
+      new Date(sessionData.expires) < new Date()) {
     return null;
   }
 
@@ -38,11 +48,12 @@ export async function getUser() {
 
   const foundUser = user[0] ?? null;
   
-  // Cache the user for 5 minutes
+  // Cache with session ID
   if (foundUser) {
     userCache = {
       user: foundUser,
       expires: Date.now() + 5 * 60 * 1000, // 5 minutes
+      sessionId: sessionId
     };
   }
 
@@ -263,4 +274,132 @@ export async function getTeamForUserWithRole() {
  * ------------------------------------------ */
 export function clearUserCache() {
   userCache = null;
+}
+
+/* -------------------------------------------
+ * Add Vehicle
+ * ------------------------------------------ */
+export async function addVehicleWithLog(vehicle: NewVehicle) {
+  const user = await getUser();
+  if (!user) throw new Error('User not authenticated');
+
+  const userTeam = await getUserWithTeam(user.id);
+  if (!userTeam?.teamId) throw new Error('User has no team');
+
+  const [newVehicle] = await db
+    .insert(vehicles)
+    .values(vehicle)
+    .returning();
+
+  // Log activity
+  await db.insert(activityLogs).values({
+    userId: user.id,
+    teamId: userTeam.teamId,
+    action: ActivityType.ADD_VEHICLE,
+    timestamp: new Date(),
+    ipAddress: '', // optional: fill in from request if you want
+  });
+
+  return newVehicle;
+}
+
+/* -------------------------------------------
+ * Get all vehicles
+ * ------------------------------------------ */
+export async function getVehicles() {
+  return await db.select().from(vehicles);
+}
+
+/* -------------------------------------------
+ * Update Vehicle
+ * ------------------------------------------ */
+export async function updateVehicleById(id: number, data: Partial<NewVehicle>) {
+  const user = await getUser();
+  if (!user) throw new Error("User not authenticated");
+
+  const userTeam = await getUserWithTeam(user.id);
+  if (!userTeam?.teamId) throw new Error("User has no team");
+
+  // Create a clean data object for the update
+  const updateData: Partial<NewVehicle> = {};
+
+  // Handle all fields explicitly
+  if (data.brand !== undefined) updateData.brand = data.brand;
+  if (data.model !== undefined) updateData.model = data.model;
+  if (data.year !== undefined) updateData.year = data.year;
+  if (data.plate !== undefined) updateData.plate = data.plate;
+  if (data.engine !== undefined) updateData.engine = data.engine;
+  if (data.fuelType !== undefined) updateData.fuelType = data.fuelType;
+  if (data.gearbox !== undefined) updateData.gearbox = data.gearbox;
+  if (data.seats !== undefined) updateData.seats = data.seats;
+  if (data.kilometers !== undefined) updateData.kilometers = data.kilometers;
+  if (data.notes !== undefined) updateData.notes = data.notes;
+
+  // Handle registrationExp carefully
+  if (data.registrationExp !== undefined) {
+    if (data.registrationExp === null) {
+      // Since the schema has .notNull(), we can't set it to null
+      // You might want to handle this case differently based on your business logic
+      throw new Error("Registration expiration date is required");
+    } else {
+      // Convert to Date object
+      const dateValue = new Date(data.registrationExp);
+      if (isNaN(dateValue.getTime())) {
+        throw new Error("Invalid registration expiration date");
+      }
+      updateData.registrationExp = dateValue;
+    }
+  }
+
+  const updated = await db
+    .update(vehicles)
+    .set(updateData)
+    .where(eq(vehicles.id, id))
+    .returning();
+
+  if (updated.length === 0) {
+    throw new Error("Vehicle not found");
+  }
+
+  await db.insert(activityLogs).values({
+    userId: user.id,
+    teamId: userTeam.teamId,
+    action: ActivityType.UPDATE_VEHICLE,
+    timestamp: new Date(),
+    ipAddress: "", // optional
+  });
+
+  return updated[0];
+}
+
+/* -------------------------------------------
+ * Delete Vehicle
+ * ------------------------------------------ */
+export async function deleteVehicleById(id: number) {
+  const user = await getUser();
+  if (!user) throw new Error("User not authenticated");
+
+  const userTeam = await getUserWithTeam(user.id);
+  if (!userTeam?.teamId) throw new Error("User has no team");
+
+  // Delete the vehicle
+  const deleted = await db
+    .delete(vehicles)
+    .where(eq(vehicles.id, id))
+    .returning();
+
+  if (deleted.length === 0) {
+    throw new Error("Vehicle not found or already deleted");
+  }
+
+  // Log activity
+  await db.insert(activityLogs).values({
+    userId: user.id,
+    teamId: userTeam.teamId,
+    action: ActivityType.DELETE_VEHICLE,
+    timestamp: new Date(),
+    ipAddress: "", // Fixed: was 'ipAccount'
+  });
+
+  return deleted[0];
 }

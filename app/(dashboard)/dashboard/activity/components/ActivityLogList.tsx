@@ -30,6 +30,9 @@ const iconMap: Record<ActivityType, LucideIcon> = {
   [ActivityType.REMOVE_TEAM_MEMBER]: UserMinus,
   [ActivityType.INVITE_TEAM_MEMBER]: Mail,
   [ActivityType.ACCEPT_INVITATION]: CheckCircle,
+  [ActivityType.ADD_VEHICLE]: CheckCircle,
+  [ActivityType.UPDATE_VEHICLE]: Settings,
+  [ActivityType.DELETE_VEHICLE]: AlertCircle,
 };
 
 function formatTimestamp(date: Date): string {

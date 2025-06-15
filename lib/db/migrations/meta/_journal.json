@@ -15,6 +15,13 @@
       "when": 1749784566295,
       "tag": "0001_aberrant_scarlet_witch",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1749852092466,
+      "tag": "0002_simple_juggernaut",
+      "breakpoints": true
     }
   ]
 }

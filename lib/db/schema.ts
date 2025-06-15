@@ -153,6 +153,26 @@ export const activityLogsRelations = relations(activityLogs, ({ one }) => ({
   }),
 }));
 
+
+export const vehicles = pgTable('vehicles', {
+  id: serial('id').primaryKey(),
+  brand: varchar('brand', { length: 100 }).notNull(),
+  model: varchar('model', { length: 100 }).notNull(),
+  year: integer('year').notNull(),
+  plate: varchar('plate', { length: 20 }).notNull().unique(),
+  registrationExp: timestamp('registration_exp').notNull(),
+  engine: integer('engine'),
+  fuelType: varchar('fuel_type', { length: 50 }).notNull(),
+  gearbox: varchar('gearbox', { length: 50 }).notNull(),
+  seats: integer('seats'),
+  kilometers: integer('kilometers').notNull(),
+  notes: text('notes'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+}, (table) => ({
+  plateIdx: index('idx_vehicles_plate').on(table.plate),
+}));
+
+
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type Team = typeof teams.$inferSelect;
@@ -168,6 +188,9 @@ export type TeamDataWithMembers = Team & {
     user: Pick<User, 'id' | 'name' | 'email'>;
   })[];
 };
+export type Vehicle = typeof vehicles.$inferSelect;
+export type NewVehicle = typeof vehicles.$inferInsert;
+
 
 export enum ActivityType {
   SIGN_UP = 'SIGN_UP',
@@ -181,4 +204,7 @@ export enum ActivityType {
   INVITE_TEAM_MEMBER = 'INVITE_TEAM_MEMBER',
   ACCEPT_INVITATION = 'ACCEPT_INVITATION',
   UPDATE_TEAM = 'UPDATE_TEAM',
+  ADD_VEHICLE = 'ADD_VEHICLE',
+  UPDATE_VEHICLE = 'UPDATE_VEHICLE',
+  DELETE_VEHICLE = 'DELETE_VEHICLE',
 }
